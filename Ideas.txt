@@ -1,0 +1,19 @@
+Game Ideas
+
+Difficult but fun
+1. Tank Game - a game where you control a tank top down, and it moves around a 
+3d mapped sphere, objective is to fight off other tanks(players), collect resources
+, and the winner, has the most kills/ or is the last alive(IDK yet) 
+
+2. a turn based combat game where each turn you get up to 3 actions(move, attack, heal, 
+etc.). Each player makes his moves before seeing what the others had chossen. Think
+JRPG or stratigy game meets Kahoot.
+
+3. Smash brothers knock off (Fighting Game)
+
+4. Racing game
+
+Standard(done before)
+1. Chess
+2. Checkers
+3. Card games
