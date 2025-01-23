@@ -66,6 +66,11 @@ public class ChessGame extends JFrame {
 		north.setVisible(true);
 		north.setBackground(Color.GRAY);
 		north.setPreferredSize(new Dimension(0,(int)(sidePanelRatio*windowSize)));
+		
+		JLabel tempText = new JLabel("Will store timer");
+		tempText.setVisible(true);
+		north.add(tempText);
+		
 	}
 	
 	/*
@@ -78,6 +83,9 @@ public class ChessGame extends JFrame {
 		west.setVisible(true);
 		west.setBackground(Color.GRAY);
 		west.setPreferredSize(new Dimension((int)(sidePanelRatio*windowSize), 0));
+		JLabel tempText = new JLabel("Will store captured white pieces");
+		tempText.setVisible(true);
+		west.add(tempText);
 	}
 	
 	/*
@@ -90,6 +98,9 @@ public class ChessGame extends JFrame {
 		south.setVisible(true);
 		south.setBackground(Color.GRAY);
 		south.setPreferredSize(new Dimension(0, (int)(sidePanelRatio*windowSize)));
+		JLabel tempText = new JLabel("Will store notation or other things");
+		tempText.setVisible(true);
+		south.add(tempText);
 	}
 	
 	/*
@@ -101,7 +112,10 @@ public class ChessGame extends JFrame {
 	private void eastPanelDesign() {
 		east.setVisible(true);
 		east.setBackground(Color.GRAY);
-		east.setPreferredSize(new Dimension((int)(sidePanelRatio*windowSize), 0));
+		east.setPreferredSize(new Dimension((int)(sidePanelRatio*windowSize), 100));
+		JLabel tempText = new JLabel("Will store captured black pieces");
+		tempText.setVisible(true);
+		east.add(tempText);
 	}
 	
 	/*
