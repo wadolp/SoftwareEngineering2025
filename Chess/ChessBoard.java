@@ -1,5 +1,4 @@
-package Test;
-
+package Chess;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
@@ -10,7 +9,7 @@ import java.util.TimerTask;
 
 import javax.swing.*;
 
-public class ChessBoard extends JFrame{
+public class ChessBoard extends JPanel {
 	
 	boolean switchVar;
 	public ChessBoard () {
@@ -19,8 +18,9 @@ public class ChessBoard extends JFrame{
 		JPanel test[][] = new JPanel[8][8];
 		
 		this.setVisible(true);
-		this.setSize(new Dimension(500,500));
 		this.setBackground(Color.WHITE);
+		
+		//Generate JPanels for black and white 
 		for (int i = 0; i < 8; i++) {
 			
 			if (i % 2 == 0) {
@@ -63,35 +63,7 @@ public class ChessBoard extends JFrame{
 		
 		
 		
-		//-Change Later
-		Timer resizeTimer = new Timer();
-
-        addComponentListener(new ComponentAdapter() {
-            private TimerTask resizeTask;
-
-            @Override
-            public void componentResized(ComponentEvent e) {
-                if (resizeTask != null) {
-                    resizeTask.cancel(); // Cancel the previous task
-                }
-
-                resizeTask = new TimerTask() {
-                    @Override
-                    public void run() {
-                        SwingUtilities.invokeLater(() -> {
-                            if (getWidth() > getHeight()) {
-                            	setSize(new Dimension(getWidth(), getWidth()));
-                            } else {
-                            	setSize(new Dimension(getHeight(), getHeight()));
-                            }
-                        });
-                    }
-                };
-
-                // Schedule the task to run after a delay (e.g., 300 ms)
-                resizeTimer.schedule(resizeTask, 300);
-            }
-        });
+		
 		
 	}
 	
