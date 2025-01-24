@@ -3,8 +3,11 @@ package Chess;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Point;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -17,16 +20,21 @@ public class ChessGame extends JFrame {
 	JPanel west = new JPanel();
 	JPanel south = new JPanel();
 	JPanel north = new JPanel();
+	ChessBoard chessBoard;
+	
+	//Variables for mouse listener
+	int[] centerPanelCoordinates = new int[4]; //stores the corners starting from top left clockwise
 	
 	public ChessGame() {
 		
-		ChessBoard chessBoard = new ChessBoard();
+		chessBoard = new ChessBoard();
 		
 		//Set layout for JFrame
 		setVisible(true);
 		setSize(new Dimension(windowSize, windowSize));
 		setLayout(new BorderLayout());
 		add(chessBoard, BorderLayout.CENTER);
+		mouseListenerAdd();
 		
 		//Change in the future, just test
 		addSidePanels();
@@ -168,6 +176,30 @@ public class ChessGame extends JFrame {
                 resizeTimer.schedule(resizeTask, 300);
             }
         });
+	}
+	
+	private void mouseListenerAdd() {
+		//Initialize the corner coordinates
+		centerPanelCoordinates[0] = chessBoard.getLocation().x; //Stores left wall
+		centerPanelCoordinates[1] = chessBoard.getLocation().y; //Stores top wall
+		centerPanelCoordinates[2] = chessBoard.getLocation().x + chessBoard.getWidth(); //Stores right wall
+		centerPanelCoordinates[3] = chessBoard.getLocation().y + chessBoard.getHeight(); //Stores bottom wall
+		
+				
+		addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                // Get the position of the mouse
+                int x = e.getX();
+                int y = e.getY();
+                
+                if ((x >= centerPanelCoordinates[0]) && (x <= centerPanelCoordinates[2]) && (y >= centerPanelCoordinates[1]) && (y <= centerPanelCoordinates[3])) {
+                	System.out.println(x + ", " + y);
+                }
+                
+            }
+        });
+
 	}
 	
 	public static void main(String args[]) {
