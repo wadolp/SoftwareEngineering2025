@@ -4,8 +4,10 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.util.Timer;
@@ -14,13 +16,14 @@ import java.util.TimerTask;
 import javax.swing.*;
 
 public class ChessGame extends JFrame {
-	private int windowSize = 500;
+	private int windowSize = 1000;
 	private double sidePanelRatio = .15; //How much space of the window does the side panel take up
 	JPanel east = new JPanel();
 	JPanel west = new JPanel();
 	JPanel south = new JPanel();
 	JPanel north = new JPanel();
 	ChessBoard chessBoard;
+	Rectangle[][] squareChessBounds;
 	
 	//Variables for mouse listener
 	int[] centerPanelCoordinates = new int[4]; //stores the corners starting from top left clockwise
@@ -28,7 +31,7 @@ public class ChessGame extends JFrame {
 	public ChessGame() {
 		
 		chessBoard = new ChessBoard();
-		
+		squareChessBounds = chessBoard.getSquareBounds();
 		//Set layout for JFrame
 		setVisible(true);
 		setSize(new Dimension(windowSize, windowSize));
@@ -39,7 +42,7 @@ public class ChessGame extends JFrame {
 		//Change in the future, just test
 		addSidePanels();
 		addWindowResizeSensor();
-		
+		chessBoard.setSquareBorders();
 	}
 	
 	
@@ -61,6 +64,9 @@ public class ChessGame extends JFrame {
 		west.setPreferredSize(new Dimension((int)(sidePanelRatio*getWidth()), 0));
 		south.setPreferredSize(new Dimension(0, (int)(sidePanelRatio*getWidth())));
 		east.setPreferredSize(new Dimension((int)(sidePanelRatio*getWidth()), 0));
+		
+		chessBoard.generateSquareBounds();
+		squareChessBounds = chessBoard.generateSquareBounds();
         
 	}
 	
@@ -186,15 +192,20 @@ public class ChessGame extends JFrame {
 		centerPanelCoordinates[3] = chessBoard.getLocation().y + chessBoard.getHeight(); //Stores bottom wall
 		
 				
-		addMouseMotionListener(new MouseMotionAdapter() {
-            @Override
-            public void mouseMoved(MouseEvent e) {
+		addMouseListener(new MouseAdapter() {
+			@Override
+            public void mousePressed(MouseEvent e) {
                 // Get the position of the mouse
-                int x = e.getX();
-                int y = e.getY();
+                //int x = e.getX();
+                //int y = e.getY();
+            	Point p = e.getPoint();
                 
-                if ((x >= centerPanelCoordinates[0]) && (x <= centerPanelCoordinates[2]) && (y >= centerPanelCoordinates[1]) && (y <= centerPanelCoordinates[3])) {
-                	System.out.println(x + ", " + y);
+                for (int i = 0; i < 8; i++) {
+                	for (int u = 0; u < 8; u++) {
+                		if (squareChessBounds[i][u].contains(p)) {
+                			System.out.println("X: " + u + " Y: " + i);
+                		}
+                	}
                 }
                 
             }

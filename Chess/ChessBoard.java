@@ -2,6 +2,8 @@ package Chess;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.Timer;
@@ -10,19 +12,20 @@ import java.util.TimerTask;
 import javax.swing.*;
 
 public class ChessBoard extends JPanel {
-	
+	Rectangle[][] squareBorders;
+	JPanel Squares[][];
 	public ChessBoard () {
 		
 		this.setLayout(new GridLayout(8,8));
 		this.setVisible(true);
 		this.setBackground(Color.WHITE);
-		JPanel Squares[][] = generateBoard();
-		
-		
+		Squares = generateBoard();
 		
 	}
 	
-	
+	public void setSquareBorders() {
+		squareBorders = generateSquareBounds();
+	}
 	/*
 	 * Method name: generateBoard: Creates the grid of panels, black and white
 	 * Input: None
@@ -73,6 +76,21 @@ public class ChessBoard extends JPanel {
 				}
 		
 		return temporary;
+	}
+	
+	public Rectangle[][] generateSquareBounds() {
+		Rectangle[][] temp = new Rectangle[8][8];
+		for (int i = 0; i < 8; i++) {
+			for (int u = 0; u < 8; u++) {
+				Point location = Squares[i][u].getLocationOnScreen();
+				temp[7-i][u] = new Rectangle(location.x, location.y, Squares[i][u].getWidth(), Squares[i][u].getHeight());
+			}
+		}
+		return temp;
+	}
+	
+	public Rectangle[][] getSquareBounds() {
+		return squareBorders;
 	}
 	
 	public static void main(String args[]) {
