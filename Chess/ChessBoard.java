@@ -109,7 +109,4 @@ public class ChessBoard extends JPanel {
 		return squareBorders;
 	}
 	
-	public static void main(String args[]) {
-		new ChessBoard();
-	}
 }
