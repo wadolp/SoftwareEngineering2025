@@ -6,9 +6,13 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 
 public class ChessBoard extends JPanel {
@@ -20,6 +24,18 @@ public class ChessBoard extends JPanel {
 		this.setVisible(true);
 		this.setBackground(Color.WHITE);
 		Squares = generateBoard();
+		
+		/*
+		BufferedImage myPicture = null;
+		try {
+			myPicture = ImageIO.read(new File(""));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		JLabel picLabel = new JLabel(new ImageIcon(myPicture));
+		add(picLabel);
+		*/
 		
 	}
 	

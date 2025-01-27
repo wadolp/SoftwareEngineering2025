@@ -203,7 +203,8 @@ public class ChessGame extends JFrame {
                 for (int i = 0; i < 8; i++) {
                 	for (int u = 0; u < 8; u++) {
                 		if (squareChessBounds[i][u].contains(p)) {
-                			System.out.println("X: " + u + " Y: " + i);
+                			//System.out.println("X: " + u + " Y: " + i);
+                			System.out.println(convertCoordToNotation(u, i));
                 		}
                 	}
                 }
@@ -211,6 +212,13 @@ public class ChessGame extends JFrame {
             }
         });
 
+	}
+	
+	//Takes in coords and converts to things like E4, H5
+	private String convertCoordToNotation(int x, int y) {
+		String[] columnLetter = {"a","b","c","d","e","f","g","h"};
+		String[] rowNumber = {"1","2","3","4","5","6","7","8"};
+		return columnLetter[x] + rowNumber[y];
 	}
 	
 	public static void main(String args[]) {
