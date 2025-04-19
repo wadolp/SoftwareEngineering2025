@@ -39,7 +39,7 @@ public class ChessPieceQueen implements ChessPiece {
 
         return (deltaH == deltaV)
                 || this.location.getHLocation() == newLocation.getHLocation()
-                || this.location.getVLocation() == newLocation.getVLocation();;
+                || this.location.getVLocation() == newLocation.getVLocation();
     }
 
     @Override
