@@ -46,16 +46,17 @@ public class ChessGame extends JFrame {
         // Initialize resource manager
         resourceManager = ResourceManager.getInstance();
         pieceImages = resourceManager.getPieceImages();
-        
+
+        // Initialize the pieces in the boardState array
+        initializeChessBoard();
+
         // Initialize the chess board
         chessBoard = new ChessBoard();
-        initializeChessBoard(); // Initialize pieces first
-        chessBoard.setBoardState(boardState); // Then tell the board about the pieces
-        chessBoard.setPieceImages(pieceImages); 
-        
-        // Add the chess board to the frame
+        chessBoard.setBoardState(boardState);
+        chessBoard.setPieceImages(pieceImages);
+
+        // Add the chess board to the frame and finish initialization
         add(chessBoard, BorderLayout.CENTER);
-        squareChessBounds = chessBoard.getSquareBounds();
         
         // Set up mouse listener for chess moves
         mouseListenerAdd();

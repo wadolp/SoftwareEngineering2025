@@ -61,43 +61,52 @@ public class ChessBoard extends JPanel {
     }
     
     @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        
-        // If we have a board state and images, draw the pieces
-        if (boardState != null && pieceImages != null) {
-            for (int row = 0; row < 8; row++) {
-                for (int col = 0; col < 8; col++) {
-                    ChessPiece piece = boardState[row][col];
-                    if (piece != null) {
-                        // Get the image for this piece
-                        String key = piece.getColor() + "_" + piece.getRank();
-                        Image img = pieceImages.get(key);
-                        
-                        if (img != null) {
-                            // Calculate position to draw the image
-                            Rectangle bounds = squareBorders[row][col];
-                            
-                            // Draw the image centered in the square
-                            int imgWidth = img.getWidth(null);
-                            int imgHeight = img.getHeight(null);
-                            int x = bounds.x + (bounds.width - imgWidth) / 2;
-                            int y = bounds.y + (bounds.height - imgHeight) / 2;
-                            
-                            g.drawImage(img, x, y, null);
-                        }
-                    }
+protected void paintComponent(Graphics g) {
+    // First call the parent class's paintComponent to draw the basic panel
+    super.paintComponent(g);
+    
+    // Only try to draw pieces if we have both a board state and piece images
+    if (boardState != null && pieceImages != null) {
+        // Loop through all squares on the chess board
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                // Get the chess piece at this location (if any)
+                ChessPiece piece = boardState[row][col];
+                
+                // If there's a piece at this location
+                if (piece != null) {
+                    // Create a key to look up the correct image
+                    // Format is "COLOR_RANK", e.g. "WHITE_King" or "BLACK_Pawn"
+                    String key = piece.getColor() + "_" + piece.getRank();
                     
-                    // Draw highlight if this square is highlighted
-                    if (highlightedSquares.containsKey(new Point(col, row))) {
+                    // Get the image for this piece
+                    Image img = pieceImages.get(key);
+                    
+                    if (img != null) {
+                        // Get the bounds of this square on the screen
                         Rectangle bounds = squareBorders[row][col];
-                        g.setColor(highlightColor);
-                        g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+                        
+                        // Calculate position to center the image in the square
+                        int imgWidth = img.getWidth(null);
+                        int imgHeight = img.getHeight(null);
+                        int x = bounds.x + (bounds.width - imgWidth) / 2;
+                        int y = bounds.y + (bounds.height - imgHeight) / 2;
+                        
+                        // Draw the image at the calculated position
+                        g.drawImage(img, x, y, null);
                     }
+                }
+                
+                // Draw highlight if this square is highlighted (for selected pieces)
+                if (highlightedSquares.containsKey(new Point(col, row))) {
+                    Rectangle bounds = squareBorders[row][col];
+                    g.setColor(highlightColor);
+                    g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
                 }
             }
         }
     }
+}
     
     public void setSquareBorders() {
         squareBorders = generateSquareBounds();
