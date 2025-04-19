@@ -49,8 +49,9 @@ public class ChessGame extends JFrame {
         
         // Initialize the chess board
         chessBoard = new ChessBoard();
-        chessBoard.setBoardState(boardState);
-        chessBoard.setPieceImages(pieceImages);
+        initializeChessBoard(); // Initialize pieces first
+        chessBoard.setBoardState(boardState); // Then tell the board about the pieces
+        chessBoard.setPieceImages(pieceImages); 
         
         // Add the chess board to the frame
         add(chessBoard, BorderLayout.CENTER);
