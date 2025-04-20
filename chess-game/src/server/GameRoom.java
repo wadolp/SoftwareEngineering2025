@@ -40,37 +40,31 @@ public class GameRoom {
      * @param client The client connection to add
      */
     public void addPlayer(ConnectionToClient client) {
-        players.add(client);
-        
-        // If we have two players, start the game
-        if (players.size() == 2) {
-            startGame();
+        if (!players.contains(client)) {
+            players.add(client);
+            System.out.println("Added player to game " + gameId + ": " + client.getInfo("username"));
         }
     }
+    
     
     /**
      * Start the game when both players are connected
      */
-    private void startGame() {
-        gameInProgress = true;
-        
-        // For now, just set the second player as black
-        if (players.size() == 2) {
-            try {
-                String player2Username = (String) players.get(1).getInfo("username");
-                blackPlayer = player2Username;
-                
-                // Send game info to both players
-                for (ConnectionToClient client : players) {
-                    client.sendToClient(new GameStartMessage(gameId, whitePlayer, blackPlayer));
-                }
-                
-                System.out.println("Game " + gameId + " started: " + whitePlayer + " (White) vs " + blackPlayer + " (Black)");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+// In GameRoom.java
+public void startGame() {
+    gameInProgress = true;
+    
+    // Send game info to both players
+    try {
+        for (ConnectionToClient client : players) {
+            client.sendToClient(new GameStartMessage(gameId, whitePlayer, blackPlayer));
         }
+        
+        System.out.println("Game " + gameId + " started: " + whitePlayer + " (White) vs " + blackPlayer + " (Black)");
+    } catch (IOException e) {
+        e.printStackTrace();
     }
+}
     
     /**
      * Process a move from a player

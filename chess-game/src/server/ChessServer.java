@@ -103,21 +103,49 @@ public class ChessServer extends AbstractServer {
             System.out.println("Error: Game room not found for ID " + move.getGameId());
         }
     }
-    
+    private ConnectionToClient waitingPlayer = null;
     /**
      * Match a player with an opponent or create a waiting game
      */
     private void matchPlayer(ConnectionToClient client) {
-        // For simplicity, this just creates a new game for every player
-        // In a real implementation, you would match waiting players
-        String gameId = "game" + nextGameId++;
         String username = (String) client.getInfo("username");
         
-        GameRoom room = new GameRoom(gameId, username, "opponent"); // Placeholder opponent
-        activeGames.put(gameId, room);
-        room.addPlayer(client);
-        
-        System.out.println("Created new game room: " + gameId);
+        if (waitingPlayer == null) {
+            // No players waiting - add this player to waiting queue
+            waitingPlayer = client;
+            try {
+                client.sendToClient(new GameStartMessage("waiting", username, "Waiting for opponent..."));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Player " + username + " is waiting for an opponent.");
+        } else {
+            // We have a waiting player - create a game
+            String waitingUsername = (String) waitingPlayer.getInfo("username");
+            String gameId = "game" + nextGameId++;
+            
+            // Create game room with the waiting player as white, new player as black
+            GameRoom room = new GameRoom(gameId, waitingUsername, username);
+            activeGames.put(gameId, room);
+            
+            // Add both players to the room
+            room.addPlayer(waitingPlayer);
+            room.addPlayer(client);
+            
+            // Send game start message to both players
+            try {
+                GameStartMessage startMsg = new GameStartMessage(gameId, waitingUsername, username);
+                waitingPlayer.sendToClient(startMsg);
+                client.sendToClient(startMsg);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            
+            System.out.println("Created new game: " + waitingUsername + " (White) vs " + username + " (Black) - ID: " + gameId);
+            
+            // Reset waiting player
+            waitingPlayer = null;
+        }
     }
     
     /**
