@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="oscf-1.00">
-    <CLASSES>
-      <root url="jar://$MAVEN_REPOSITORY$/ocsf/oscf/1.00/oscf-1.00.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>
