@@ -113,16 +113,14 @@ public class ChessServer extends AbstractServer {
         if (waitingPlayer == null) {
             // No players waiting - add this player to waiting queue
             waitingPlayer = client;
-            try {
-                client.sendToClient(new GameStartMessage("waiting", username, "Waiting for opponent..."));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
             System.out.println("Player " + username + " is waiting for an opponent.");
         } else {
             // We have a waiting player - create a game
             String waitingUsername = (String) waitingPlayer.getInfo("username");
             String gameId = "game" + nextGameId++;
+            
+            System.out.println("Creating game between " + waitingUsername + " (White) and " + 
+                             username + " (Black) with ID: " + gameId);
             
             // Create game room with the waiting player as white, new player as black
             GameRoom room = new GameRoom(gameId, waitingUsername, username);
@@ -131,17 +129,18 @@ public class ChessServer extends AbstractServer {
             // Add both players to the room
             room.addPlayer(waitingPlayer);
             room.addPlayer(client);
+            System.out.println("Added both players to game room " + gameId);
+            room.startGame(); // Start the game
             
             // Send game start message to both players
+            GameStartMessage startMsg = new GameStartMessage(gameId, waitingUsername, username);
             try {
-                GameStartMessage startMsg = new GameStartMessage(gameId, waitingUsername, username);
                 waitingPlayer.sendToClient(startMsg);
                 client.sendToClient(startMsg);
+                System.out.println("Sent game start messages to both players");
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            
-            System.out.println("Created new game: " + waitingUsername + " (White) vs " + username + " (Black) - ID: " + gameId);
             
             // Reset waiting player
             waitingPlayer = null;

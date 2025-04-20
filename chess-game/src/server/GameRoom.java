@@ -51,8 +51,9 @@ public class GameRoom {
      * Start the game when both players are connected
      */
 // In GameRoom.java
+// In GameRoom.java
 public void startGame() {
-    gameInProgress = true;
+    gameInProgress = true;  // Set this flag to true
     
     // Send game info to both players
     try {
@@ -72,25 +73,41 @@ public void startGame() {
      * @param move The move to process
      * @param sender The client that sent the move
      */
+    // In GameRoom.java
     public void processMove(GameMove move, ConnectionToClient sender) {
+        // Add this line at the beginning of the method:
+        this.gameInProgress = true;  // Ensure the game is marked as in progress
+        
         if (!gameInProgress) {
+            System.out.println("Move ignored - game not in progress");
             return;
         }
         
         String senderUsername = (String) sender.getInfo("username");
+        System.out.println("Processing move from " + senderUsername + " in game " + gameId);
+        System.out.println("Move's gameId: " + move.getGameId() + ", expected: " + this.gameId);
         
         // Verify it's player's turn
         if ((isWhiteTurn && senderUsername.equals(whitePlayer)) ||
             (!isWhiteTurn && senderUsername.equals(blackPlayer))) {
             
-            // In a real implementation, you would validate the move here
-            // For now, just broadcast the move to all players
-            broadcastMove(move);
+            System.out.println("Valid move - broadcasting to " + players.size() + " players");
+            
+            // IMPORTANT: Broadcast move to ALL players
+            for (ConnectionToClient player : players) {
+                try {
+                    String playerName = (String) player.getInfo("username");
+                    System.out.println("  Sending move to player: " + playerName);
+                    player.sendToClient(move);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
             
             // Switch turns
             isWhiteTurn = !isWhiteTurn;
             
-            System.out.println("Move in game " + gameId + ": " + 
+            System.out.println("Move processed in game " + gameId + ": " + 
                               "(" + move.getFromRow() + "," + move.getFromCol() + ") to " +
                               "(" + move.getToRow() + "," + move.getToCol() + ")");
         } else {

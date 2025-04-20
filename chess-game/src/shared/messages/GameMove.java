@@ -7,6 +7,7 @@ public class GameMove implements Serializable {
     private int fromCol;
     private int toRow;
     private int toCol;
+    private String sender;
     
     public GameMove(String gameId, int fromRow, int fromCol, int toRow, int toCol) {
         this.gameId = gameId;
@@ -34,5 +35,8 @@ public class GameMove implements Serializable {
     
     public int getToCol() {
         return toCol;
+    }
+    public String getSender() {
+        return sender;
     }
 }

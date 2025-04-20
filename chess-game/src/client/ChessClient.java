@@ -63,33 +63,48 @@ public class ChessClient extends AbstractClient {
                     }
                 });
             }
-        } else if (msg instanceof GameStartMessage) {
+        }else if (msg instanceof GameStartMessage) {
             GameStartMessage start = (GameStartMessage) msg;
-            if (chessBoard != null) {
-                SwingUtilities.invokeLater(() -> {
-                    // Create a game object and pass it to the chess board
-                    Game game = new Game(
-                        start.getGameId(), 
-                        start.getWhitePlayer(), 
-                        start.getBlackPlayer()
-                    );
-                    chessBoard.setGame(game);
-                    
-                    // Update the window title
-                    String color = username.equals(start.getWhitePlayer()) ? "White" : "Black";
-                    mainFrame.setTitle("Chess - " + username + " (" + color + ")");
-                });
-            }
+            SwingUtilities.invokeLater(() -> {
+                // Create a game object and pass it to the chess board
+                Game game = new Game(
+                    start.getGameId(), 
+                    start.getWhitePlayer(), 
+                    start.getBlackPlayer()
+                );
+                
+                // Make sure we have a chess board
+                if (chessBoard == null) {
+                    showChessBoard();
+                }
+                
+                chessBoard.setGame(game);
+                
+                // Update the window title
+                String color = username.equals(start.getWhitePlayer()) ? "White" : "Black";
+                mainFrame.setTitle("Chess - " + username + " (" + color + ")");
+                
+                System.out.println("Game started: " + start.getWhitePlayer() + " vs " + start.getBlackPlayer());
+            });
+        
         } else if (msg instanceof GameMove) {
             GameMove move = (GameMove) msg;
+            System.out.println("Received move: " + move.getFromRow() + "," + move.getFromCol() + 
+                              " to " + move.getToRow() + "," + move.getToCol() + 
+                              " - game ID: " + move.getGameId());
+            
             SwingUtilities.invokeLater(() -> {
                 if (chessBoard != null) {
+                    // We'll process all moves, but with additional logging
+                    System.out.println("Processing move in client, username: " + getUsername());
                     chessBoard.processOpponentMove(
                         move.getFromRow(), 
                         move.getFromCol(), 
                         move.getToRow(), 
                         move.getToCol()
                     );
+                } else {
+                    System.out.println("ERROR: Received move but chessBoard is null!");
                 }
             });
         }
