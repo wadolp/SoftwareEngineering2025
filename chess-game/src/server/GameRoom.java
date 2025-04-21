@@ -46,37 +46,80 @@ public class GameRoom {
         }
     }
     
-    
     /**
      * Start the game when both players are connected
      */
-// In GameRoom.java
-// In GameRoom.java
-public void startGame() {
-    gameInProgress = true;  // Set this flag to true
-    
-    // Send game info to both players
-    try {
-        for (ConnectionToClient client : players) {
-            client.sendToClient(new GameStartMessage(gameId, whitePlayer, blackPlayer));
-        }
+    public void startGame() {
+        gameInProgress = true;  // Set this flag to true
         
-        System.out.println("Game " + gameId + " started: " + whitePlayer + " (White) vs " + blackPlayer + " (Black)");
-    } catch (IOException e) {
-        e.printStackTrace();
+        // Send game info to both players
+        try {
+            for (ConnectionToClient client : players) {
+                client.sendToClient(new GameStartMessage(gameId, whitePlayer, blackPlayer));
+            }
+            
+            System.out.println("Game " + gameId + " started: " + whitePlayer + " (White) vs " + blackPlayer + " (Black)");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-}
     
     /**
-     * Process a move from a player
+     * Process a game state message from a player
+     * 
+     * @param stateMsg The game state message to process
+     * @param sender The client that sent the game state
+     */
+    public void processGameState(GameStateMessage stateMsg, ConnectionToClient sender) {
+        // Ensure the game is marked as in progress
+        this.gameInProgress = true;
+        
+        if (!gameInProgress) {
+            System.out.println("State update ignored - game not in progress");
+            return;
+        }
+        
+        String senderUsername = (String) sender.getInfo("username");
+        System.out.println("Processing game state from " + senderUsername + " in game " + gameId);
+        
+        // Verify it's player's turn before updating
+        if ((stateMsg.isWhiteTurn() && senderUsername.equals(blackPlayer)) ||
+            (!stateMsg.isWhiteTurn() && senderUsername.equals(whitePlayer))) {
+            
+            System.out.println("Valid state update - broadcasting to " + players.size() + " players");
+            
+            // Update server's record of whose turn it is
+            isWhiteTurn = stateMsg.isWhiteTurn();
+            
+            // Broadcast game state to ALL players
+            for (ConnectionToClient player : players) {
+                try {
+                    String playerName = (String) player.getInfo("username");
+                    System.out.println("  Sending game state to player: " + playerName);
+                    player.sendToClient(stateMsg);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            
+            System.out.println("Game state processed in game " + gameId + 
+                              ". Next turn: " + (isWhiteTurn ? "White" : "Black"));
+        } else {
+            System.out.println("Ignored game state from " + senderUsername + " - not their turn or incorrect turn state");
+        }
+    }
+    
+    /**
+     * Process a move from a player (DEPRECATED - kept for backward compatibility)
      * 
      * @param move The move to process
      * @param sender The client that sent the move
      */
-    // In GameRoom.java
     public void processMove(GameMove move, ConnectionToClient sender) {
-        // Add this line at the beginning of the method:
-        this.gameInProgress = true;  // Ensure the game is marked as in progress
+        System.out.println("WARNING: Using deprecated processMove method instead of processGameState");
+        
+        // Ensure the game is marked as in progress
+        this.gameInProgress = true;
         
         if (!gameInProgress) {
             System.out.println("Move ignored - game not in progress");
@@ -93,7 +136,7 @@ public void startGame() {
             
             System.out.println("Valid move - broadcasting to " + players.size() + " players");
             
-            // IMPORTANT: Broadcast move to ALL players
+            // Broadcast move to ALL players
             for (ConnectionToClient player : players) {
                 try {
                     String playerName = (String) player.getInfo("username");
@@ -112,21 +155,6 @@ public void startGame() {
                               "(" + move.getToRow() + "," + move.getToCol() + ")");
         } else {
             System.out.println("Ignored move from " + senderUsername + " - not their turn");
-        }
-    }
-    
-    /**
-     * Broadcast a move to all players in the game
-     * 
-     * @param move The move to broadcast
-     */
-    private void broadcastMove(GameMove move) {
-        try {
-            for (ConnectionToClient client : players) {
-                client.sendToClient(move);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
     

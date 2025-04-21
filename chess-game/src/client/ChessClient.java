@@ -63,7 +63,7 @@ public class ChessClient extends AbstractClient {
                     }
                 });
             }
-        }else if (msg instanceof GameStartMessage) {
+        } else if (msg instanceof GameStartMessage) {
             GameStartMessage start = (GameStartMessage) msg;
             SwingUtilities.invokeLater(() -> {
                 // Create a game object and pass it to the chess board
@@ -86,17 +86,32 @@ public class ChessClient extends AbstractClient {
                 
                 System.out.println("Game started: " + start.getWhitePlayer() + " vs " + start.getBlackPlayer());
             });
-        
+        } else if (msg instanceof GameStateMessage) {
+            // NEW: Handle the complete game state message
+            GameStateMessage stateMsg = (GameStateMessage) msg;
+            System.out.println("Received game state from: " + stateMsg.getLastMovePlayer() + 
+                              " - game ID: " + stateMsg.getGameId());
+            
+            SwingUtilities.invokeLater(() -> {
+                if (chessBoard != null) {
+                    System.out.println("Processing game state in client, username: " + getUsername());
+                    chessBoard.processGameState(stateMsg);
+                } else {
+                    System.out.println("ERROR: Received game state but chessBoard is null!");
+                }
+            });
         } else if (msg instanceof GameMove) {
+            // DEPRECATED: For backward compatibility only
             GameMove move = (GameMove) msg;
-            System.out.println("Received move: " + move.getFromRow() + "," + move.getFromCol() + 
+            System.out.println("DEPRECATED: Received move instead of game state: " + 
+                              move.getFromRow() + "," + move.getFromCol() + 
                               " to " + move.getToRow() + "," + move.getToCol() + 
                               " - game ID: " + move.getGameId());
             
             SwingUtilities.invokeLater(() -> {
                 if (chessBoard != null) {
-                    // We'll process all moves, but with additional logging
-                    System.out.println("Processing move in client, username: " + getUsername());
+                    System.out.println("WARNING: Processing move in client instead of game state. " + 
+                                     "This is deprecated behavior.");
                     chessBoard.processOpponentMove(
                         move.getFromRow(), 
                         move.getFromCol(), 

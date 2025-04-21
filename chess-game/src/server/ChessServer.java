@@ -13,6 +13,7 @@ public class ChessServer extends AbstractServer {
     private Database db;
     private HashMap<String, GameRoom> activeGames;
     private int nextGameId = 1;
+    private ConnectionToClient waitingPlayer = null;
     
     /**
      * Create a new chess server
@@ -37,7 +38,12 @@ public class ChessServer extends AbstractServer {
         else if (msg instanceof RegistrationMessage) {
             handleRegistrationMessage((RegistrationMessage) msg, client);
         }
+        else if (msg instanceof GameStateMessage) {
+            // NEW: Handle complete game state updates
+            handleGameState((GameStateMessage) msg, client);
+        }
         else if (msg instanceof GameMove) {
+            // DEPRECATED: For backward compatibility only
             handleGameMove((GameMove) msg, client);
         }
         // Handle other message types...
@@ -92,9 +98,24 @@ public class ChessServer extends AbstractServer {
     }
     
     /**
-     * Handle a game move from a client
+     * Handle a game state update from a client
+     */
+    private void handleGameState(GameStateMessage stateMsg, ConnectionToClient client) {
+        GameRoom room = activeGames.get(stateMsg.getGameId());
+        
+        if (room != null) {
+            room.processGameState(stateMsg, client);
+        } else {
+            System.out.println("Error: Game room not found for ID " + stateMsg.getGameId());
+        }
+    }
+    
+    /**
+     * Handle a game move from a client (DEPRECATED - kept for backward compatibility)
      */
     private void handleGameMove(GameMove move, ConnectionToClient client) {
+        System.out.println("WARNING: Received deprecated GameMove message instead of GameStateMessage");
+        
         GameRoom room = activeGames.get(move.getGameId());
         
         if (room != null) {
@@ -103,7 +124,7 @@ public class ChessServer extends AbstractServer {
             System.out.println("Error: Game room not found for ID " + move.getGameId());
         }
     }
-    private ConnectionToClient waitingPlayer = null;
+    
     /**
      * Match a player with an opponent or create a waiting game
      */
@@ -132,16 +153,6 @@ public class ChessServer extends AbstractServer {
             System.out.println("Added both players to game room " + gameId);
             room.startGame(); // Start the game
             
-            // Send game start message to both players
-            GameStartMessage startMsg = new GameStartMessage(gameId, waitingUsername, username);
-            try {
-                waitingPlayer.sendToClient(startMsg);
-                client.sendToClient(startMsg);
-                System.out.println("Sent game start messages to both players");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            
             // Reset waiting player
             waitingPlayer = null;
         }
@@ -159,6 +170,12 @@ public class ChessServer extends AbstractServer {
             
             // Clean up any games the user was in
             // In a real implementation, you would notify opponents and handle forfeits
+            
+            // If this was the waiting player, clear the waiting status
+            if (client == waitingPlayer) {
+                waitingPlayer = null;
+                System.out.println("Removed disconnected player from waiting queue");
+            }
         }
     }
     

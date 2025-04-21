@@ -1,12 +1,12 @@
 package client;
 
 import shared.messages.GameMove;
+import shared.messages.GameStateMessage;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
-import java.io.Serializable;
 
 /**
  * ChessBoard class for online chess game
@@ -32,6 +32,7 @@ public class ChessBoard extends JPanel {
     // UI components
     private JPanel boardPanel;
     private JLabel statusLabel;
+    private JLabel lastMoveLabel;
 
     /**
      * Constructor for the chess board
@@ -57,9 +58,13 @@ public class ChessBoard extends JPanel {
         ));
         add(boardPanel, BorderLayout.CENTER);
         
-        // Create status label
+        // Create status panel
+        JPanel statusPanel = new JPanel(new GridLayout(2, 1));
         statusLabel = new JLabel("Waiting for opponent...");
-        add(statusLabel, BorderLayout.SOUTH);
+        lastMoveLabel = new JLabel("No moves yet");
+        statusPanel.add(statusLabel);
+        statusPanel.add(lastMoveLabel);
+        add(statusPanel, BorderLayout.SOUTH);
         
         updateBoardDisplay();
         
@@ -80,7 +85,7 @@ public class ChessBoard extends JPanel {
     public void setGame(Game game) {
         this.game = game;
         this.gameId = game.getGameId();
-        System.out.println("Game ID set to: " + this.gameId); // Add debugging
+        System.out.println("Game ID set to: " + this.gameId);
         updateStatusLabel();
     }
     
@@ -177,6 +182,17 @@ public class ChessBoard extends JPanel {
     }
     
     /**
+     * Update the last move label
+     */
+    private void updateLastMoveLabel(String player, int fromRow, int fromCol, int toRow, int toCol) {
+        if (fromRow >= 0 && fromCol >= 0 && toRow >= 0 && toCol >= 0) {
+            String moveText = player + " moved from (" + fromRow + "," + fromCol + 
+                             ") to (" + toRow + "," + toCol + ")";
+            lastMoveLabel.setText(moveText);
+        }
+    }
+    
+    /**
      * Handle a square being clicked on the board
      */
     private void handleSquareClick(int row, int col) {
@@ -210,22 +226,29 @@ public class ChessBoard extends JPanel {
             }
             
             // Check if the move is valid
-            // In ChessBoard.java - handleSquareClick method
             if (model.isValidMove(selectedRow, selectedCol, row, col)) {
                 try {
-                    // IMPORTANT: Make sure gameId is correctly set here!
-                    System.out.println("Sending move with gameId: " + gameId);
-                    client.sendToServer(new GameMove(gameId, selectedRow, selectedCol, row, col));
-        
-                    // Apply move locally
+                    System.out.println("Making move with gameId: " + gameId);
+                    
+                    // First apply the move locally
                     model.makeMove(selectedRow, selectedCol, row, col);
+                    
+                    // Create and send game state message
+                    GameStateMessage stateMsg = model.createGameStateMessage(
+                        gameId, 
+                        client.getUsername()
+                    );
+                    
+                    // Send the game state to the server
+                    client.sendToServer(stateMsg);
         
-                 // Reset selection
+                    // Reset selection
                     selectedRow = -1;
                     selectedCol = -1;
         
-                 // Update display
-                updateBoardDisplay();
+                    // Update display
+                    updateBoardDisplay();
+                    updateLastMoveLabel(client.getUsername(), selectedRow, selectedCol, row, col);
                 } catch (IOException e) {
                     e.printStackTrace();
                     JOptionPane.showMessageDialog(this, "Error sending move to server", "Network Error", JOptionPane.ERROR_MESSAGE);
@@ -243,43 +266,48 @@ public class ChessBoard extends JPanel {
     }
     
     /**
-     * Process a move received from the opponent via the server
+     * Process a game state received from the server
+     * @param stateMsg The complete game state from the server
      */
+    public void processGameState(GameStateMessage stateMsg) {
+        System.out.println("Processing game state in ChessBoard from player: " + stateMsg.getLastMovePlayer());
+        System.out.println("Is white turn: " + stateMsg.isWhiteTurn());
+        
+        // Update the model with the new game state
+        model.setGameState(stateMsg.getBoard(), stateMsg.getPieceColors(), stateMsg.isWhiteTurn());
+        
+        // Update the display
+        updateBoardDisplay();
+        
+        // Update the last move label
+        updateLastMoveLabel(
+            stateMsg.getLastMovePlayer(),
+            stateMsg.getLastMoveFromRow(),
+            stateMsg.getLastMoveFromCol(),
+            stateMsg.getLastMoveToRow(),
+            stateMsg.getLastMoveToCol()
+        );
+    }
+    
     /**
- * Process a move received from the opponent via the server
- */
-/**
- * Process a move received from the opponent via the server
- */
-public void processOpponentMove(int fromRow, int fromCol, int toRow, int toCol) {
-    System.out.println("Processing opponent move in ChessBoard: " + fromRow + "," + fromCol + 
-                      " to " + toRow + "," + toCol);
-    System.out.println("Current player: " + client.getUsername() + 
-                      ", White player: " + game.getWhitePlayer() + 
-                      ", Black player: " + game.getBlackPlayer());
-    System.out.println("Is white turn: " + model.isWhiteTurn());
+     * This method is kept for backward compatibility but redirects to processGameState
+     */
+    public void processOpponentMove(int fromRow, int fromCol, int toRow, int toCol) {
+        System.out.println("DEPRECATED: processOpponentMove called. This method should not be used anymore.");
+        // Do nothing - we should be receiving complete game states now
+    }
     
-    // DON'T check if it's the player's turn - we need to apply opponent moves regardless
-    // This was the original bug - we were skipping opponent moves!
-    
-    // Execute the move
-    model.makeMove(fromRow, fromCol, toRow, toCol);
-    
-    // Update the display
-    updateBoardDisplay();
-}
-/**
- * Get the game information
- */
-public Game getGame() {
-    return this.game;
-}
+    /**
+     * Get the game information
+     */
+    public Game getGame() {
+        return this.game;
+    }
 
-/**
- * Get whether it's white's turn
- */
-public boolean getIsWhiteTurn() {
-    return model.isWhiteTurn();
+    /**
+     * Get whether it's white's turn
+     */
+    public boolean getIsWhiteTurn() {
+        return model.isWhiteTurn();
+    }
 }
-}
-

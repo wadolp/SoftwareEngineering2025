@@ -1,6 +1,7 @@
 package client;
 
 import shared.messages.GameMove;
+import shared.messages.GameStateMessage;
 
 /**
  * Model class for chess board data and game logic
@@ -26,6 +27,12 @@ public class ChessBoardModel {
     private int[][] board;          // Stores piece types
     private int[][] pieceColors;    // Stores piece colors
     private boolean isWhiteTurn;    // Whose turn it is
+    
+    // Last move information
+    private int lastMoveFromRow = -1;
+    private int lastMoveFromCol = -1;
+    private int lastMoveToRow = -1;
+    private int lastMoveToCol = -1;
     
     /**
      * Initialize the chess board model
@@ -269,6 +276,12 @@ public class ChessBoardModel {
      * @param toCol Destination column
      */
     public void makeMove(int fromRow, int fromCol, int toRow, int toCol) {
+        // Store last move information
+        this.lastMoveFromRow = fromRow;
+        this.lastMoveFromCol = fromCol;
+        this.lastMoveToRow = toRow;
+        this.lastMoveToCol = toCol;
+        
         // Move the piece
         board[toRow][toCol] = board[fromRow][fromCol];
         pieceColors[toRow][toCol] = pieceColors[fromRow][fromCol];
@@ -288,6 +301,48 @@ public class ChessBoardModel {
         
         // Switch turns
         isWhiteTurn = !isWhiteTurn;
+    }
+    
+    /**
+     * Completely replace the board state with new state from server
+     * 
+     * @param newBoard New board array (piece types)
+     * @param newPieceColors New piece colors array
+     * @param newIsWhiteTurn New turn state
+     */
+    public void setGameState(int[][] newBoard, int[][] newPieceColors, boolean newIsWhiteTurn) {
+        // Deep copy the arrays
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            for (int j = 0; j < BOARD_SIZE; j++) {
+                this.board[i][j] = newBoard[i][j];
+                this.pieceColors[i][j] = newPieceColors[i][j];
+            }
+        }
+        
+        this.isWhiteTurn = newIsWhiteTurn;
+        
+        System.out.println("Game state updated. Is white turn: " + isWhiteTurn);
+    }
+    
+    /**
+     * Create a game state message with the current board state
+     * 
+     * @param gameId The game ID
+     * @param lastMovePlayer Username of player who made the last move
+     * @return A GameStateMessage containing the full board state
+     */
+    public GameStateMessage createGameStateMessage(String gameId, String lastMovePlayer) {
+        return new GameStateMessage(
+            gameId,
+            board,
+            pieceColors, 
+            isWhiteTurn,
+            lastMovePlayer,
+            lastMoveFromRow,
+            lastMoveFromCol,
+            lastMoveToRow,
+            lastMoveToCol
+        );
     }
     
     /**
@@ -336,6 +391,22 @@ public class ChessBoardModel {
      */
     public void setWhiteTurn(boolean isWhiteTurn) {
         this.isWhiteTurn = isWhiteTurn;
+    }
+    
+    /**
+     * Get the board array
+     * @return The board array
+     */
+    public int[][] getBoard() {
+        return board;
+    }
+    
+    /**
+     * Get the piece colors array
+     * @return The piece colors array
+     */
+    public int[][] getPieceColors() {
+        return pieceColors;
     }
     
     /**
