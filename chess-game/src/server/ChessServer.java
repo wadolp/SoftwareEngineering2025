@@ -5,6 +5,8 @@ import shared.messages.*;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Server implementation for the networked chess game
@@ -13,7 +15,7 @@ public class ChessServer extends AbstractServer {
     private Database db;
     private HashMap<String, GameRoom> activeGames;
     private int nextGameId = 1;
-    private ConnectionToClient waitingPlayer = null;
+    private List<ConnectionToClient> waitingPlayers = new ArrayList<>();
     
     /**
      * Create a new chess server
@@ -39,14 +41,17 @@ public class ChessServer extends AbstractServer {
             handleRegistrationMessage((RegistrationMessage) msg, client);
         }
         else if (msg instanceof GameStateMessage) {
-            // NEW: Handle complete game state updates
+            // Handle complete game state updates
             handleGameState((GameStateMessage) msg, client);
         }
         else if (msg instanceof GameMove) {
             // DEPRECATED: For backward compatibility only
             handleGameMove((GameMove) msg, client);
         }
-        // Handle other message types...
+        else if (msg instanceof InfoMessage) {
+            // Handle info messages like new game requests
+            handleInfoMessage((InfoMessage) msg, client);
+        }
     }
     
     /**
@@ -98,6 +103,99 @@ public class ChessServer extends AbstractServer {
     }
     
     /**
+     * Handle info messages from clients
+     */
+    private void handleInfoMessage(InfoMessage msg, ConnectionToClient client) {
+        String message = msg.getMessage();
+        String username = (String) client.getInfo("username");
+        
+        System.out.println("Received info message: " + message + " from " + username);
+        
+        if (message.equals("NEW_GAME_REQUEST")) {
+            // Handle request for a new game
+            handleNewGameRequest(client);
+        }
+    }
+    
+    /**
+     * Handle a request for a new game
+     */
+    private void handleNewGameRequest(ConnectionToClient client) {
+        String username = (String) client.getInfo("username");
+        
+        // Remove player from any active games
+        removePlayerFromGames(client);
+        
+        // Add player to waiting list
+        if (!waitingPlayers.contains(client)) {
+            waitingPlayers.add(client);
+            System.out.println("Added " + username + " to waiting list for a new game");
+            
+            try {
+                // Notify the client they're waiting
+                client.sendToClient(new InfoMessage("WAITING_FOR_OPPONENT"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        
+        // Check if we can match players now
+        if (waitingPlayers.size() >= 2) {
+            ConnectionToClient player1 = waitingPlayers.remove(0);
+            ConnectionToClient player2 = waitingPlayers.remove(0);
+            
+            createGame(player1, player2);
+        }
+    }
+    
+    /**
+     * Remove a player from any active game rooms
+     */
+    private void removePlayerFromGames(ConnectionToClient client) {
+        String username = (String) client.getInfo("username");
+        
+        // This is a simple implementation - in a real game you might want to handle
+        // this more gracefully, such as notifying the opponent about forfeit
+        
+        List<String> gamesToRemove = new ArrayList<>();
+        
+        for (String gameId : activeGames.keySet()) {
+            GameRoom room = activeGames.get(gameId);
+            
+            if (username.equals(room.getWhitePlayer()) || username.equals(room.getBlackPlayer())) {
+                gamesToRemove.add(gameId);
+            }
+        }
+        
+        for (String gameId : gamesToRemove) {
+            System.out.println("Removing game " + gameId + " due to new game request from " + username);
+            activeGames.remove(gameId);
+        }
+    }
+    
+    /**
+     * Create a new game between two players
+     */
+    private void createGame(ConnectionToClient player1, ConnectionToClient player2) {
+        String player1Username = (String) player1.getInfo("username");
+        String player2Username = (String) player2.getInfo("username");
+        String gameId = "game" + nextGameId++;
+        
+        System.out.println("Creating game between " + player1Username + " (White) and " + 
+                         player2Username + " (Black) with ID: " + gameId);
+        
+        // Create game room with player1 as white, player2 as black
+        GameRoom room = new GameRoom(gameId, player1Username, player2Username);
+        activeGames.put(gameId, room);
+        
+        // Add both players to the room
+        room.addPlayer(player1);
+        room.addPlayer(player2);
+        System.out.println("Added both players to game room " + gameId);
+        room.startGame(); // Start the game
+    }
+    
+    /**
      * Handle a game state update from a client
      */
     private void handleGameState(GameStateMessage stateMsg, ConnectionToClient client) {
@@ -131,30 +229,25 @@ public class ChessServer extends AbstractServer {
     private void matchPlayer(ConnectionToClient client) {
         String username = (String) client.getInfo("username");
         
-        if (waitingPlayer == null) {
-            // No players waiting - add this player to waiting queue
-            waitingPlayer = client;
+        // Add to waiting list
+        if (!waitingPlayers.contains(client)) {
+            waitingPlayers.add(client);
             System.out.println("Player " + username + " is waiting for an opponent.");
-        } else {
-            // We have a waiting player - create a game
-            String waitingUsername = (String) waitingPlayer.getInfo("username");
-            String gameId = "game" + nextGameId++;
             
-            System.out.println("Creating game between " + waitingUsername + " (White) and " + 
-                             username + " (Black) with ID: " + gameId);
+            try {
+                // Notify the client they're waiting
+                client.sendToClient(new InfoMessage("WAITING_FOR_OPPONENT"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        
+        // Check if we can match players now
+        if (waitingPlayers.size() >= 2) {
+            ConnectionToClient player1 = waitingPlayers.remove(0);
+            ConnectionToClient player2 = waitingPlayers.remove(0);
             
-            // Create game room with the waiting player as white, new player as black
-            GameRoom room = new GameRoom(gameId, waitingUsername, username);
-            activeGames.put(gameId, room);
-            
-            // Add both players to the room
-            room.addPlayer(waitingPlayer);
-            room.addPlayer(client);
-            System.out.println("Added both players to game room " + gameId);
-            room.startGame(); // Start the game
-            
-            // Reset waiting player
-            waitingPlayer = null;
+            createGame(player1, player2);
         }
     }
     
@@ -168,14 +261,11 @@ public class ChessServer extends AbstractServer {
         if (username != null) {
             System.out.println("User " + username + " disconnected.");
             
-            // Clean up any games the user was in
-            // In a real implementation, you would notify opponents and handle forfeits
+            // Remove from waiting list if present
+            waitingPlayers.remove(client);
             
-            // If this was the waiting player, clear the waiting status
-            if (client == waitingPlayer) {
-                waitingPlayer = null;
-                System.out.println("Removed disconnected player from waiting queue");
-            }
+            // Clean up any games the user was in
+            removePlayerFromGames(client);
         }
     }
     

@@ -2,6 +2,7 @@ package client;
 
 import shared.messages.GameMove;
 import shared.messages.GameStateMessage;
+import shared.messages.InfoMessage;
 
 import javax.swing.*;
 import java.awt.*;
@@ -18,7 +19,7 @@ public class ChessBoard extends JPanel {
     
     // Game state
     private ChessBoardModel model;
-    private boolean isCheckmate;    // Is the game over
+    private boolean isGameOver = false;  // Is the game over
     
     // Selection state
     private int selectedRow = -1;
@@ -33,6 +34,8 @@ public class ChessBoard extends JPanel {
     private JPanel boardPanel;
     private JLabel statusLabel;
     private JLabel lastMoveLabel;
+    private JButton newGameButton;
+    private JPanel controlPanel;
 
     /**
      * Constructor for the chess board
@@ -42,7 +45,6 @@ public class ChessBoard extends JPanel {
         
         // Initialize game state
         model = new ChessBoardModel();
-        isCheckmate = false;
         
         // Create a placeholder game until we get real game info
         this.game = new Game("tempId", "waiting...", "waiting...");
@@ -58,13 +60,26 @@ public class ChessBoard extends JPanel {
         ));
         add(boardPanel, BorderLayout.CENTER);
         
-        // Create status panel
+        // Create control panel with status info and new game button
+        controlPanel = new JPanel(new BorderLayout());
+        
+        // Status panel (top of control panel)
         JPanel statusPanel = new JPanel(new GridLayout(2, 1));
         statusLabel = new JLabel("Waiting for opponent...");
         lastMoveLabel = new JLabel("No moves yet");
         statusPanel.add(statusLabel);
         statusPanel.add(lastMoveLabel);
-        add(statusPanel, BorderLayout.SOUTH);
+        controlPanel.add(statusPanel, BorderLayout.CENTER);
+        
+        // New game button (bottom of control panel)
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        newGameButton = new JButton("New Game");
+        newGameButton.addActionListener(e -> requestNewGame());
+        newGameButton.setEnabled(false);  // Disabled until game is over
+        buttonPanel.add(newGameButton);
+        controlPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        add(controlPanel, BorderLayout.SOUTH);
         
         updateBoardDisplay();
         
@@ -110,6 +125,15 @@ public class ChessBoard extends JPanel {
                 // Highlight selected square
                 if (row == selectedRow && col == selectedCol) {
                     square.setBackground(new Color(186, 202, 68)); // Highlight color
+                }
+                
+                // Highlight the king if in check
+                int currentColor = model.isWhiteTurn() ? ChessBoardModel.WHITE : ChessBoardModel.BLACK;
+                if (model.isInCheck(currentColor)) {
+                    int[] kingPos = model.findKing(currentColor);
+                    if (kingPos != null && row == kingPos[0] && col == kingPos[1]) {
+                        square.setBackground(new Color(232, 88, 73)); // Red highlight for check
+                    }
                 }
                 
                 // Add chess piece if present
@@ -164,9 +188,27 @@ public class ChessBoard extends JPanel {
      */
     private void updateStatusLabel() {
         String status;
+        String gameStatus = model.checkGameStatus();
         
-        if (isCheckmate) {
-            status = (model.isWhiteTurn() ? "Black" : "White") + " wins by checkmate!";
+        if (gameStatus.equals("CHECKMATE")) {
+            isGameOver = true;
+            newGameButton.setEnabled(true);
+            
+            String winner = model.isWhiteTurn() ? "Black" : "White";
+            status = winner + " Wins by Checkmate!";
+        } else if (gameStatus.equals("STALEMATE")) {
+            isGameOver = true;
+            newGameButton.setEnabled(true);
+            status = "Game Drawn by Stalemate!";
+        } else if (gameStatus.equals("CHECK")) {
+            String turnColor = model.isWhiteTurn() ? "White" : "Black";
+            String turnPlayer = model.isWhiteTurn() ? game.getWhitePlayer() : game.getBlackPlayer();
+            
+            if (isMyTurn()) {
+                status = "Your King is in Check! (" + turnColor + ")";
+            } else {
+                status = turnPlayer + "'s King is in Check! (" + turnColor + ")";
+            }
         } else {
             String turnColor = model.isWhiteTurn() ? "White" : "Black";
             String turnPlayer = model.isWhiteTurn() ? game.getWhitePlayer() : game.getBlackPlayer();
@@ -197,7 +239,7 @@ public class ChessBoard extends JPanel {
      */
     private void handleSquareClick(int row, int col) {
         // Only allow moves if it's the player's turn and the game is not over
-        if (isCheckmate || !isMyTurn()) {
+        if (isGameOver || !isMyTurn()) {
             return;
         }
         
@@ -227,6 +269,18 @@ public class ChessBoard extends JPanel {
             
             // Check if the move is valid
             if (model.isValidMove(selectedRow, selectedCol, row, col)) {
+                // Check if the move would leave or put the player in check
+                int playerColor = model.getPieceColor(selectedRow, selectedCol);
+                if (model.moveWouldLeaveInCheck(selectedRow, selectedCol, row, col)) {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "That move would leave your king in check!",
+                        "Invalid Move",
+                        JOptionPane.WARNING_MESSAGE
+                    );
+                    return;
+                }
+                
                 try {
                     System.out.println("Making move with gameId: " + gameId);
                     
@@ -258,6 +312,37 @@ public class ChessBoard extends JPanel {
     }
     
     /**
+     * Request a new game from the server
+     */
+    private void requestNewGame() {
+        try {
+            // Send a message to the server requesting a new game
+            client.sendToServer(new InfoMessage("NEW_GAME_REQUEST"));
+            
+            // Disable the button to prevent multiple requests
+            newGameButton.setEnabled(false);
+            statusLabel.setText("Waiting for a new game...");
+            
+            // Reset the game state
+            isGameOver = false;
+            selectedRow = -1;
+            selectedCol = -1;
+            model = new ChessBoardModel(); // Create a fresh board
+            
+            // Update the display
+            updateBoardDisplay();
+        } catch (IOException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(
+                this,
+                "Error requesting new game: " + e.getMessage(),
+                "Network Error",
+                JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+    
+    /**
      * Determine if it's the current player's turn
      */
     private boolean isMyTurn() {
@@ -275,6 +360,13 @@ public class ChessBoard extends JPanel {
         
         // Update the model with the new game state
         model.setGameState(stateMsg.getBoard(), stateMsg.getPieceColors(), stateMsg.isWhiteTurn());
+        
+        // Check for checkmate after updating
+        String gameStatus = model.checkGameStatus();
+        if (gameStatus.equals("CHECKMATE") || gameStatus.equals("STALEMATE")) {
+            isGameOver = true;
+            newGameButton.setEnabled(true);
+        }
         
         // Update the display
         updateBoardDisplay();

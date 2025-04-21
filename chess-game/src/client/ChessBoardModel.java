@@ -346,14 +346,201 @@ public class ChessBoardModel {
     }
     
     /**
+     * Check if a player is in check
+     * @param color The color of the player to check (WHITE or BLACK)
+     * @return True if the player is in check, false otherwise
+     */
+    public boolean isInCheck(int color) {
+        // Find the king's position
+        int[] kingPos = findKing(color);
+        if (kingPos == null) {
+            return false; // Shouldn't happen in a valid game
+        }
+        
+        int kingRow = kingPos[0];
+        int kingCol = kingPos[1];
+        
+        // Check if any opponent piece can capture the king
+        int opponentColor = (color == WHITE) ? BLACK : WHITE;
+        
+        for (int row = 0; row < BOARD_SIZE; row++) {
+            for (int col = 0; col < BOARD_SIZE; col++) {
+                // If it's an opponent's piece
+                if (board[row][col] != EMPTY && pieceColors[row][col] == opponentColor) {
+                    // Check if it can move to the king's position
+                    if (isValidPieceMove(row, col, kingRow, kingCol)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Check if a piece can move from one position to another without considering turns
+     * This is used for check detection
+     */
+    private boolean isValidPieceMove(int fromRow, int fromCol, int toRow, int toCol) {
+        // Basic validation
+        if (fromRow < 0 || fromRow >= BOARD_SIZE || fromCol < 0 || fromCol >= BOARD_SIZE ||
+            toRow < 0 || toRow >= BOARD_SIZE || toCol < 0 || toCol >= BOARD_SIZE) {
+            return false;
+        }
+        
+        // Can't move an empty square
+        if (board[fromRow][fromCol] == EMPTY) {
+            return false;
+        }
+        
+        // Can't capture your own piece
+        if (board[toRow][toCol] != EMPTY && pieceColors[toRow][toCol] == pieceColors[fromRow][fromCol]) {
+            return false;
+        }
+        
+        // Piece-specific movement validation
+        int pieceType = board[fromRow][fromCol];
+        
+        switch (pieceType) {
+            case PAWN:
+                return isValidPawnMove(fromRow, fromCol, toRow, toCol);
+            case KNIGHT:
+                return isValidKnightMove(fromRow, fromCol, toRow, toCol);
+            case BISHOP:
+                return isValidBishopMove(fromRow, fromCol, toRow, toCol);
+            case ROOK:
+                return isValidRookMove(fromRow, fromCol, toRow, toCol);
+            case QUEEN:
+                return isValidQueenMove(fromRow, fromCol, toRow, toCol);
+            case KING:
+                return isValidKingMove(fromRow, fromCol, toRow, toCol);
+            default:
+                return false;
+        }
+    }
+    
+    /**
+     * Check if a move would leave the player in check
+     * @param fromRow Starting row
+     * @param fromCol Starting column
+     * @param toRow Destination row
+     * @param toCol Destination column
+     * @return True if the move leaves the player in check, false otherwise
+     */
+    public boolean moveWouldLeaveInCheck(int fromRow, int fromCol, int toRow, int toCol) {
+        // Save the current board state
+        int[][] tempBoard = new int[BOARD_SIZE][BOARD_SIZE];
+        int[][] tempColors = new int[BOARD_SIZE][BOARD_SIZE];
+        
+        for (int r = 0; r < BOARD_SIZE; r++) {
+            for (int c = 0; c < BOARD_SIZE; c++) {
+                tempBoard[r][c] = board[r][c];
+                tempColors[r][c] = pieceColors[r][c];
+            }
+        }
+        
+        // Get the player's color
+        int playerColor = pieceColors[fromRow][fromCol];
+        
+        // Temporarily make the move
+        board[toRow][toCol] = board[fromRow][fromCol];
+        pieceColors[toRow][toCol] = pieceColors[fromRow][fromCol];
+        board[fromRow][fromCol] = EMPTY;
+        pieceColors[fromRow][fromCol] = 0;
+        
+        // Check if the player is in check after the move
+        boolean inCheck = isInCheck(playerColor);
+        
+        // Restore the original board
+        for (int r = 0; r < BOARD_SIZE; r++) {
+            for (int c = 0; c < BOARD_SIZE; c++) {
+                board[r][c] = tempBoard[r][c];
+                pieceColors[r][c] = tempColors[r][c];
+            }
+        }
+        
+        return inCheck;
+    }
+    
+    /**
+     * Check if a player is in checkmate
+     * @param color The color of the player to check (WHITE or BLACK)
+     * @return True if the player is in checkmate, false otherwise
+     */
+    public boolean isInCheckmate(int color) {
+        // First, make sure the player is in check
+        if (!isInCheck(color)) {
+            return false;
+        }
+        
+        // Try every possible move for every piece of this color
+        for (int fromRow = 0; fromRow < BOARD_SIZE; fromRow++) {
+            for (int fromCol = 0; fromCol < BOARD_SIZE; fromCol++) {
+                // If this is a piece of the right color
+                if (board[fromRow][fromCol] != EMPTY && pieceColors[fromRow][fromCol] == color) {
+                    // Try moving it to every possible square
+                    for (int toRow = 0; toRow < BOARD_SIZE; toRow++) {
+                        for (int toCol = 0; toCol < BOARD_SIZE; toCol++) {
+                            // Check if the move is valid according to chess rules
+                            if (isValidPieceMove(fromRow, fromCol, toRow, toCol)) {
+                                // Check if the move would get the player out of check
+                                if (!moveWouldLeaveInCheck(fromRow, fromCol, toRow, toCol)) {
+                                    // Found a valid move that avoids check
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If we've tried all moves and none work, it's checkmate
+        return true;
+    }
+    
+    /**
      * Check game status for checkmate or stalemate
      * @return Game status string ("CHECKMATE", "STALEMATE", "CHECK", or "CONTINUE")
      */
     public String checkGameStatus() {
-        // This is a simplified implementation
-        // A full implementation would check for check, checkmate, and stalemate
+        int currentColor = isWhiteTurn ? WHITE : BLACK;
         
-        // For now, just return continue
+        if (isInCheckmate(currentColor)) {
+            return "CHECKMATE";
+        }
+        
+        if (isInCheck(currentColor)) {
+            return "CHECK";
+        }
+        
+        // Basic stalemate check - no legal moves but not in check
+        boolean hasLegalMove = false;
+        
+        for (int fromRow = 0; fromRow < BOARD_SIZE; fromRow++) {
+            for (int fromCol = 0; fromCol < BOARD_SIZE; fromCol++) {
+                if (board[fromRow][fromCol] != EMPTY && pieceColors[fromRow][fromCol] == currentColor) {
+                    for (int toRow = 0; toRow < BOARD_SIZE; toRow++) {
+                        for (int toCol = 0; toCol < BOARD_SIZE; toCol++) {
+                            if (isValidPieceMove(fromRow, fromCol, toRow, toCol) && 
+                                !moveWouldLeaveInCheck(fromRow, fromCol, toRow, toCol)) {
+                                hasLegalMove = true;
+                                break;
+                            }
+                        }
+                        if (hasLegalMove) break;
+                    }
+                }
+                if (hasLegalMove) break;
+            }
+            if (hasLegalMove) break;
+        }
+        
+        if (!hasLegalMove) {
+            return "STALEMATE";
+        }
+        
         return "CONTINUE";
     }
     

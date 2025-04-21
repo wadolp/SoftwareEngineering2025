@@ -87,7 +87,7 @@ public class ChessClient extends AbstractClient {
                 System.out.println("Game started: " + start.getWhitePlayer() + " vs " + start.getBlackPlayer());
             });
         } else if (msg instanceof GameStateMessage) {
-            // NEW: Handle the complete game state message
+            // Handle the complete game state message
             GameStateMessage stateMsg = (GameStateMessage) msg;
             System.out.println("Received game state from: " + stateMsg.getLastMovePlayer() + 
                               " - game ID: " + stateMsg.getGameId());
@@ -122,8 +122,25 @@ public class ChessClient extends AbstractClient {
                     System.out.println("ERROR: Received move but chessBoard is null!");
                 }
             });
+        } else if (msg instanceof InfoMessage) {
+            // Handle info messages
+            InfoMessage infoMsg = (InfoMessage) msg;
+            String message = infoMsg.getMessage();
+            
+            if (message.equals("WAITING_FOR_OPPONENT")) {
+                // The server has registered our request and we're waiting for an opponent
+                SwingUtilities.invokeLater(() -> {
+                    if (chessBoard != null) {
+                        JOptionPane.showMessageDialog(
+                            chessBoard,
+                            "Waiting for an opponent to join the game.",
+                            "New Game",
+                            JOptionPane.INFORMATION_MESSAGE
+                        );
+                    }
+                });
+            }
         }
-        // Handle other message types as needed
     }
     
     /**
